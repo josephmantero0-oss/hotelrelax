@@ -199,27 +199,59 @@ function smartReply(q){
  const allItems = allCategories.flatMap(c => (c.items || []).map(it => ({ ...it, category: c.cat })));
  const activeItems = allItems.filter(it => it.a);
 
- // 1. Direct Item & Keyword Search (exact name, partial name, dish keywords or description match)
+ // ── STEP 0: Detect veg/non-veg INTENT first so it can filter everything below ──
+ const isNonVegIntent = text.includes('non-veg') || text.includes('non veg') || text.includes('nonveg') ||
+                        text.includes('chicken') || text.includes('fish') || text.includes('mutton') ||
+                        text.includes('prawn') || text.includes('seafood') || text.includes('squid') ||
+                        text.includes('pomfret') || text.includes('mori') || text.includes('chonak') ||
+                        text.includes('egg') || text.includes('meat') || text.includes('curry');
+
+ // "veg" is intentional veg ONLY if NOT preceded by "non"
+ const isVegOnlyIntent = !isNonVegIntent && (text.includes('veg') || text.includes('vegetarian') || text.includes('pure veg'));
+
+ // 1. NON-VEG direct query
+ if(isNonVegIntent && (text.includes('non-veg') || text.includes('non veg') || text.includes('nonveg') || text === 'non veg' || text === 'nonveg')){
+   const nonVeg = activeItems.filter(i => !i.v);
+   if(nonVeg.length){
+     const names = nonVeg.map(d => `• ${d.n}${d.p ? ` (₹${d.p})` : ''}${d.d ? ` - ${d.d}` : ''} [${d.category}]`).join('\n');
+     return `🍗 Non-Veg Dishes available:\n${names}\n\n🛎️ Tap "Order Food" to order to your room!`;
+   }
+   return `Currently there are no active non-veg items on the menu. Please check with reception!`;
+ }
+
+ // 2. PURE VEG direct query
+ if(isVegOnlyIntent && (text === 'veg' || text.includes('vegetarian') || text.includes('pure veg'))){
+   const vegDishes = activeItems.filter(i => i.v);
+   if(vegDishes.length){
+     const names = vegDishes.map(d => `• ${d.n}${d.p ? ` (₹${d.p})` : ''}${d.d ? ` - ${d.d}` : ''} [${d.category}]`).join('\n');
+     return `🥗 Pure Veg Options:\n${names}\n\n🛎️ Tap "Order Food" to view the full menu and order!`;
+   }
+   return `Our kitchen offers delicious pure vegetarian meals. Tap "Order Food" to view the menu!`;
+ }
+
+ // 3. Direct Item & Keyword Search — strictly filtered by intent
  const queryClean = text.replace(/[^a-z0-9\s]/gi, ' ').trim();
- const queryTokens = queryClean.split(/\s+/).filter(t => t.length >= 2);
+ const queryTokens = queryClean.split(/\s+/).filter(t => t.length >= 2 && !['non','veg','the','and','for','are','any','show','have','what','your','this','that','want','give','option','options','dish','dishes'].includes(t));
 
  const matchedDishes = allItems.filter(it => {
+   // Apply veg/non-veg filter based on detected intent
+   if(isNonVegIntent && it.v) return false;
+   if(isVegOnlyIntent && !it.v) return false;
+
    const dName = (it.n || '').toLowerCase();
    const dDesc = (it.d || '').toLowerCase();
 
-   if(text === dName || text.includes(dName) || (dName.length >= 3 && dName.includes(text))){
-     return true;
-   }
+   // Exact or full substring match on name
+   if(text === dName || text.includes(dName) || (dName.length >= 3 && dName.includes(text.replace(/non.?veg|vegetarian|pure veg/gi,'').trim()))) return true;
 
+   // Keyword token match
    const dTokens = dName.replace(/[^a-z0-9\s]/gi, ' ').split(/\s+/).filter(t => t.length >= 2);
    const hasWordMatch = queryTokens.some(qWord => dTokens.some(dWord => dWord === qWord || (dWord.length >= 4 && (dWord.includes(qWord) || qWord.includes(dWord)))));
    if(hasWordMatch) return true;
 
+   // Description keyword (only for single specific words)
    if(queryTokens.length === 1 && queryTokens[0].length >= 3){
-     const qWord = queryTokens[0];
-     if(!['what','have','your','this','that','show','menu','want','give'].includes(qWord)){
-       if(dDesc.includes(qWord)) return true;
-     }
+     if(dDesc.includes(queryTokens[0])) return true;
    }
    return false;
  });
@@ -227,64 +259,63 @@ function smartReply(q){
  if(matchedDishes.length === 1){
    const it = matchedDishes[0];
    const status = it.a ? (it.p ? `priced at ₹${it.p}` : 'available') : 'currently sold out';
-   const vegTag = it.v ? 'Pure Veg' : 'Non-Veg';
-   const desc = it.d ? `\n_${it.d}_` : '';
-   return `🍽️ *${it.n}* [${vegTag}] (${it.category}):\nIt is ${status}.${desc}${it.a ? '\n\n🛎️ Tap "Order Food" to order directly to your room!' : ''}`;
+   const vegTag = it.v ? 'Pure Veg 🟢' : 'Non-Veg 🍗';
+   const desc = it.d ? `\n${it.d}` : '';
+   return `🍽️ ${it.n} [${vegTag}] — ${it.category}\nStatus: ${status}.${desc}${it.a ? '\n\n🛎️ Tap "Order Food" to order directly to your room!' : ''}`;
  }
 
  if(matchedDishes.length > 1){
-   const list = matchedDishes.map(it => `• *${it.n}*${it.p ? ` (₹${it.p})` : ''} [${it.v ? 'Veg' : 'Non-Veg'}]${it.a ? '' : ' - Sold out'}`).join('\n');
-   return `🍽️ Matching items found:\n${list}\n\n🛎️ Tap "Order Food" to order to your room!`;
+   const list = matchedDishes.filter(it=>it.a).map(it => `• ${it.n}${it.p ? ` (₹${it.p})` : ''} [${it.v ? 'Veg 🟢' : 'Non-Veg 🍗'}]`).join('\n');
+   return `🍽️ Matching dishes:${isNonVegIntent?' (Non-Veg)':isVegOnlyIntent?' (Veg only)':''}\n${list}\n\n🛎️ Tap "Order Food" to order!`;
  }
 
- // 2. Category matching
+ // 4. Category match
  const matchedCat = allCategories.find(c => {
    const cName = (c.cat || '').toLowerCase();
-   return text.includes(cName) || 
-          (cName.includes('drink') && (text.includes('drink') || text.includes('beverage') || text.includes('tea') || text.includes('chai') || text.includes('coffee') || text.includes('soda') || text.includes('sweet'))) ||
+   return text.includes(cName) ||
+          (cName.includes('drink') && (text.includes('drink') || text.includes('beverage') || text.includes('tea') || text.includes('coffee') || text.includes('chai') || text.includes('soda') || text.includes('sweet'))) ||
           (cName.includes('starter') && (text.includes('starter') || text.includes('snack') || text.includes('roll') || text.includes('tikka'))) ||
-          (cName.includes('meal') && (text.includes('meal') || text.includes('thali') || text.includes('rice') || text.includes('lunch') || text.includes('dinner')));
+          (cName.includes('meal') && (text.includes('meal') || text.includes('thali') || text.includes('rice') || text.includes('lunch') || text.includes('dinner'))) ||
+          (cName.includes('signature') && (text.includes('signature') || text.includes('special') || text.includes('relax special'))) ||
+          (cName.includes('weekend') && (text.includes('weekend') || text.includes('special')));
  });
 
  if(matchedCat){
-   const items = (matchedCat.items || []).filter(i => i.a);
+   let items = (matchedCat.items || []).filter(i => i.a);
+   if(isNonVegIntent) items = items.filter(i => !i.v);
+   if(isVegOnlyIntent) items = items.filter(i => i.v);
    if(items.length){
-     const list = items.map(d => `• ${d.n}${d.p ? ` (₹${d.p})` : ''}${d.d ? ` - ${d.d}` : ''}${d.v ? ' [Veg]' : ' [Non-Veg]'}`).join('\n');
-     return `📋 ${matchedCat.cat} Menu:\n${list}\n\nTap "Order Food" to order directly to your room!`;
+     const list = items.map(d => `• ${d.n}${d.p ? ` (₹${d.p})` : ''}${d.d ? ` - ${d.d}` : ''} [${d.v ? 'Veg 🟢' : 'Non-Veg 🍗'}]`).join('\n');
+     return `📋 ${matchedCat.cat}:${isNonVegIntent?' (Non-Veg only)':isVegOnlyIntent?' (Veg only)':''}\n${list}\n\nTap "Order Food" to order!`;
    }
-   return `Our ${matchedCat.cat} section is currently being updated. Tap "Order Food" to view available dishes!`;
+   return `No ${isNonVegIntent?'non-veg':isVegOnlyIntent?'veg':''} items in that category right now. Tap "Order Food" to see the full menu!`;
  }
 
- // 3. Non-veg queries
- const isNonVeg = text.includes('non-veg') || text.includes('non veg') || text.includes('nonveg') || 
-                  text.includes('chicken') || text.includes('fish') || text.includes('mutton') || 
-                  text.includes('egg') || text.includes('curry');
-
- if(isNonVeg){
+ // 5. Broad non-veg / veg queries
+ if(isNonVegIntent){
    const nonVeg = activeItems.filter(i => !i.v);
    if(nonVeg.length){
-     const names = nonVeg.map(d => `• ${d.n}${d.p ? ` (₹${d.p})` : ''}${d.d ? ` - ${d.d}` : ''} [${d.category}]`).join('\n');
-     return `🍗 Non-Veg Dishes available:\n${names}\n\nTap "Order Food" to order to your room!`;
+     const names = nonVeg.map(d => `• ${d.n}${d.p ? ` (₹${d.p})` : ''} [${d.category}]`).join('\n');
+     return `🍗 Non-Veg options available:\n${names}\n\n🛎️ Tap "Order Food" to order!`;
    }
-   return `Currently there are no active non-veg items listed on the menu. Please check with reception!`;
+   return `No non-veg items are currently available. Please check with reception!`;
  }
 
- // 4. Veg queries
- if(text.includes('veg') || text.includes('vegetarian')){
+ if(isVegOnlyIntent){
    const vegDishes = activeItems.filter(i => i.v);
    if(vegDishes.length){
-     const names = vegDishes.map(d => `• ${d.n}${d.p ? ` (₹${d.p})` : ''}${d.d ? ` - ${d.d}` : ''} [${d.category}]`).slice(0, 8).join('\n');
-     return `🥗 Pure Veg Options:\n${names}\n\nTap "Order Food" to view the full menu and order!`;
+     const names = vegDishes.map(d => `• ${d.n}${d.p ? ` (₹${d.p})` : ''} [${d.category}]`).join('\n');
+     return `🥗 Pure Veg options:\n${names}\n\n🛎️ Tap "Order Food" to order!`;
    }
-   return `We offer delicious pure vegetarian dishes. Tap "Order Food" to view the menu!`;
+   return `Our kitchen offers delicious pure vegetarian meals. Tap "Order Food" to view the menu!`;
  }
 
- // 5. WiFi
+ // 6. WiFi
  if(text.includes('wifi') || text.includes('wi-fi') || text.includes('password') || text.includes('internet')){
    return `📶 WiFi Details:\nNetwork: ${S.wifi.name || 'HotelRelax_Guest'}\nPassword: ${S.wifi.pass || 'welcome123'}\n\n(Tap the WiFi tile on the home screen to copy it with one tap!)`;
  }
 
- // 6. Rules & Timings
+ // 7. Rules & Timings
  if(text.includes('rule') || text.includes('timing') || text.includes('time') || text.includes('check-out') || text.includes('checkout') || text.includes('checkin') || text.includes('check in')){
    const rules = (S.rules || []).filter(Boolean);
    if(rules.length){
@@ -293,7 +324,7 @@ function smartReply(q){
    return `Please observe our quiet hours after 10 PM and check-out by 11 AM. Feel free to contact reception for assistance!`;
  }
 
- // 7. Notices
+ // 8. Notices
  if(text.includes('notice') || text.includes('announcement') || text.includes('update')){
    const notices = (S.notices || []).filter(n => n.t);
    if(notices.length){
@@ -302,7 +333,7 @@ function smartReply(q){
    return `There are no urgent notices at the moment. Enjoy your relaxing stay!`;
  }
 
- // 8. Suggestion
+ // 9. Suggestion
  if(text.includes('suggest') || text.includes('recommend') || text.includes('special') || text.includes('dish') || text.includes('surprise') || text.includes('best')){
    if(activeItems.length){
      const pick = activeItems[Math.floor(Math.random() * activeItems.length)];
@@ -310,23 +341,23 @@ function smartReply(q){
    }
  }
 
- // 9. Food Ordering
+ // 10. Food Ordering
  if(text.includes('order') || text.includes('food') || text.includes('menu') || text.includes('kitchen')){
    return `🛎️ Ready to dine? Tap the "Order Food" button on your screen to browse our full menu, pick your favorite items, and send the order directly via WhatsApp!`;
  }
 
- // 10. Toiletries & Amenities
+ // 11. Toiletries & Amenities
  if(text.includes('towel') || text.includes('soap') || text.includes('blanket') || text.includes('pillow') || text.includes('toiletr') || text.includes('shampoo') || text.includes('room service') || text.includes('amenit') || text.includes('kit') || text.includes('brush') || text.includes('paste')){
    const toil = (S.toil || []).filter(t => t.a && t.n).map(t => t.n).join(', ');
    return `🧴 Available room amenities:\n${toil || 'Fresh towels, toiletries, blankets, etc.'}\n\nTap the "Request" button on your screen to send a request directly to reception!`;
  }
 
- // 11. Reception / Contact
+ // 12. Reception / Contact
  if(text.includes('phone') || text.includes('call') || text.includes('contact') || text.includes('reception') || text.includes('desk') || text.includes('front desk')){
    return `📞 Reception Contact:\nPhone: ${S.hotel.phone || '+91 8956364864'}\nHotel: ${S.hotel.name} (${S.hotel.tagline || ''})\n\nFeel free to call or message us for any assistance!`;
  }
 
- // 12. Hotel Info & Custom Knowledge
+ // 13. Dynamic Hotel Info & Custom Knowledge (from Admin -> Info -> Extra Hotel & Local Info)
  if(S.hotel.ai_info && S.hotel.ai_info.trim()){
    const info = S.hotel.ai_info.trim();
    const words = text.split(/[\s,?.!]+/).filter(w => w.length > 2);
@@ -338,12 +369,12 @@ function smartReply(q){
    }
  }
 
- // 13. Greetings
+ // 14. Greetings
  if(text.includes('hi') || text.includes('hello') || text.includes('hey') || text.includes('namaste') || text.includes('good morning') || text.includes('good evening')){
    return `Welcome to ${S.hotel.name}! 🌴 I am Joy, your 24/7 digital assistant.\n\nYou can ask me about our dining menu, drinks & sweets, WiFi details, house rules, or request room amenities.`;
  }
 
- // 14. Fallback summary
+ // 15. Fallback summary
  const summary = [
    allCategories.length ? `• Food & Drinks (${allCategories.map(c => c.cat).join(', ')})` : '',
    S.wifi.name ? `• WiFi details` : '',
