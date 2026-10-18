@@ -95,28 +95,29 @@ function getMealItems(meal, allItems){
     const bk = allItems.filter(i => {
       const c = (i.category || '').toLowerCase();
       const n = (i.n || '').toLowerCase();
-      return c.includes('snack') || c.includes('drink') || c.includes('sweet') || n.includes('chai') || n.includes('tea') || n.includes('roll') || n.includes('toast') || n.includes('poha');
+      return c.includes('breakfast') || c.includes('सकाळ') || n.includes('poha') || n.includes('पोहे') || n.includes('sheera') || n.includes('upma') || n.includes('omelette') || n.includes('puri') || n.includes('chai') || n.includes('tea');
     });
     if(bk.length) return bk;
   }
   if(meal === 'lunch'){
     const lc = allItems.filter(i => {
       const c = (i.category || '').toLowerCase();
-      return c.includes('meal') || c.includes('starter') || c.includes('signature') || c.includes('weekend');
+      return c.includes('main') || c.includes('meal') || c.includes('starter') || c.includes('signature') || c.includes('weekend');
     });
     if(lc.length) return lc;
   }
   if(meal === 'snacks'){
     const sn = allItems.filter(i => {
       const c = (i.category || '').toLowerCase();
-      return c.includes('snack') || c.includes('starter') || c.includes('drink') || c.includes('sweet');
+      const n = (i.n || '').toLowerCase();
+      return c.includes('evening') || c.includes('संध्याकाळ') || n.includes('roll') || n.includes('fries') || n.includes('toast') || n.includes('pepper') || n.includes('soda') || n.includes('chai');
     });
     if(sn.length) return sn;
   }
   if(meal === 'dinner'){
     const dn = allItems.filter(i => {
       const c = (i.category || '').toLowerCase();
-      return c.includes('meal') || c.includes('starter') || c.includes('signature') || c.includes('weekend');
+      return c.includes('main') || c.includes('meal') || c.includes('starter') || c.includes('signature') || c.includes('weekend');
     });
     if(dn.length) return dn;
   }
