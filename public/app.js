@@ -48,12 +48,114 @@ function tod(){
  k.l=k.n?76:10+t*80;k.tp=k.n?14:60-Math.sin(t*Math.PI)*46;return k;
 }
 const palm=c=>`<i class="palm ${c}">${[-165,-130,-95,-60,-25,15,165].map(a=>`<b style="transform:rotate(${a}deg)"></b>`).join('')}</i>`;
+
+function getMealContext(){
+  const h = new Date().getHours() + new Date().getMinutes() / 60;
+  if(h >= 6 && h < 11.5) return 'breakfast';
+  if(h >= 11.5 && h < 16) return 'lunch';
+  if(h >= 16 && h < 19) return 'snacks';
+  if(h >= 19 && h < 23) return 'dinner';
+  return 'night';
+}
+
+const TIME_SUGGESTIONS = {
+  breakfast: [
+    "Rise and shine! 🌴 Ocean breeze + warm breakfast and fresh chai = perfect morning.",
+    "Breakfast with a sea view? ☕ Warm up with fresh rolls, tea, and morning specials.",
+    "Start your day lazy! Order fresh breakfast and tea right to your bed 🛌🍳",
+    "Morning tide is calm, sun is up. Time for a refreshing sip of hot Masala Chai!"
+  ],
+  lunch: [
+    "Lunch by the sea! 🍛 Savor our Stuffed Pomfret, Chonak Rawa Fry, or Relax Special Chicken!",
+    "Sun is high, hunger is real! 🤤 Treat yourself to a hearty Veg or Chicken Curry Thali.",
+    "Seafood lover? Today's fresh coastal fish and squid masala are calling your name 🐟",
+    "Starters or full meal? Why not both! The kitchen is tossing fresh catch 👨‍🍳",
+    "Midday treat: Chilled Lime Soda with a sizzling chicken starter 😋"
+  ],
+  snacks: [
+    "Golden sunset hour! 🌇 Grab a chilled Lime Soda or hot Chai with crispy Spring Rolls.",
+    "Afternoon dip done? Time for evening snacks and cool refreshments by the pool 🍹",
+    "Sun, sea and crispy bites: Chicken Salt & Pepper or Veg Rolls hit just right!",
+    "Sip, snack and unwind: Tap Order Food for evening refreshments to your room."
+  ],
+  dinner: [
+    "Dinner under the stars! 🌙 Relax Special Chicken, Mutton Zam-Zam, or creamy Paneer Nawabi?",
+    "Sea breeze, good vibes, great food. Treat yourself to a royal dinner feast delivered to your room 🍽️",
+    "Starters first or straight to curry? Squid Masala and Butter Chicken are tonight's stars 🌟",
+    "Cap off your day with sweet warm Gulab Jamun! You deserve it 🍯"
+  ],
+  night: [
+    "Listen to the waves crashing and drift off. 🌊 Sweet dreams!",
+    "Late night owl! 🦉 Sleep deep tonight, the ocean and hot breakfast await you tomorrow."
+  ]
+};
+
+function getMealItems(meal, allItems){
+  if(meal === 'breakfast'){
+    const bk = allItems.filter(i => {
+      const c = (i.category || '').toLowerCase();
+      const n = (i.n || '').toLowerCase();
+      return c.includes('snack') || c.includes('drink') || c.includes('sweet') || n.includes('chai') || n.includes('tea') || n.includes('roll') || n.includes('toast') || n.includes('poha');
+    });
+    if(bk.length) return bk;
+  }
+  if(meal === 'lunch'){
+    const lc = allItems.filter(i => {
+      const c = (i.category || '').toLowerCase();
+      return c.includes('meal') || c.includes('starter') || c.includes('signature') || c.includes('weekend');
+    });
+    if(lc.length) return lc;
+  }
+  if(meal === 'snacks'){
+    const sn = allItems.filter(i => {
+      const c = (i.category || '').toLowerCase();
+      return c.includes('snack') || c.includes('starter') || c.includes('drink') || c.includes('sweet');
+    });
+    if(sn.length) return sn;
+  }
+  if(meal === 'dinner'){
+    const dn = allItems.filter(i => {
+      const c = (i.category || '').toLowerCase();
+      return c.includes('meal') || c.includes('starter') || c.includes('signature') || c.includes('weekend');
+    });
+    if(dn.length) return dn;
+  }
+  return allItems;
+}
+
 const hi=()=>{const h=new Date().getHours();return h<5||h>=21?['Good night','Listen to the waves and drift off. Sleep well.']:h<12?['Good morning','Rise and shine. The sea is calm and the day is yours.']:h<17?['Good afternoon','Take it easy. Sun, sea and nothing to do.']:['Good evening','Golden hour. Grab a drink and watch the sky glow.']};
 const TIPS=['Tap WiFi for the network and password.','Hungry? Try Surprise me on the menu.','House rules are just below.','Enjoyed your stay? A kind review makes our day.','Tap the sea again and watch the waves go.'];let ti=0;
 function say(m){const b=$('#say');if(b)b.textContent=m}
-function owl(){const e=$('#sea');if(e){e.classList.add('rock');setTimeout(()=>e.classList.remove('rock'),2200)}say(TIPS[ti++%TIPS.length]);boom($('#sea'))}
+function owl(){
+  const e=$('#sea');
+  if(e){e.classList.add('rock');setTimeout(()=>e.classList.remove('rock'),2200)}
+  const meal = getMealContext();
+  const tips = TIME_SUGGESTIONS[meal] || TIME_SUGGESTIONS.lunch;
+  const tip = tips[ti++ % tips.length];
+  say(tip);
+  boom($('#sea'));
+}
 function boom(el){const r=(el||document.body).getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2,c=['#ff7a59','#ffc857','#4fd1c5','#ffffff','#c9b6ff'];for(let i=0;i<20;i++){const d=document.createElement('i');d.className='cf';d.style.cssText=`left:${x}px;top:${y}px;background:${c[i%5]};--dx:${(Math.random()-.5)*280}px;--dy:${-60-Math.random()*150}px`;document.body.appendChild(d);setTimeout(()=>d.remove(),1400)}}
-function pick(t){const all=S.menu.flatMap(c=>c.items).filter(i=>i.a&&(!vegOnly||i.v)),e=$('#pick');if(!all.length){e.innerHTML='<p class="mu">Nothing to suggest right now.</p>';return}const it=all[Math.floor(Math.random()*all.length)];e.innerHTML=`<div class="pickc"><small>Our suggestion</small><b>${esc(it.n)}</b><span>${it.p?'₹'+esc(it.p)+' · ':''}${esc(it.d)}</span></div>`;say('May we suggest the '+it.n+'?');boom(t)}
+function pick(t){
+  const meal = getMealContext();
+  const all = S.menu.flatMap(c => (c.items||[]).map(i=>({...i, category:c.cat}))).filter(i => i.a && (!vegOnly || i.v));
+  const pool = getMealItems(meal, all).filter(i => i.a && (!vegOnly || i.v));
+  const finalPool = pool.length ? pool : all;
+  const e = $('#pick');
+  if(!finalPool.length){e.innerHTML='<p class="mu">Nothing to suggest right now.</p>';return}
+  const it = finalPool[Math.floor(Math.random() * finalPool.length)];
+  const mealLabels = {
+    breakfast: '🌅 Breakfast pick',
+    lunch: '🍛 Lunch recommendation',
+    snacks: '☕ Evening snack pick',
+    dinner: '🌙 Dinner recommendation',
+    night: '🦉 Late night pick'
+  };
+  const label = mealLabels[meal] || '🌴 Chef suggestion';
+  e.innerHTML = `<div class="pickc"><small>${label}</small><b>${esc(it.n)}</b><span>${it.p ? '₹' + esc(it.p) + ' · ' : ''}${esc(it.d)}</span></div>`;
+  say('How about our ' + it.n + '? 😋');
+  boom(t);
+}
 
 function guest(){
  const ph=String(S.hotel.phone).replace(/[^+\d]/g,''),rv=url(S.review),H=hi(),T=tod();
@@ -199,6 +301,21 @@ function smartReply(q){
  const allItems = allCategories.flatMap(c => (c.items || []).map(it => ({ ...it, category: c.cat })));
  const activeItems = allItems.filter(it => it.a);
 
+ // ── GREETING CHECK: "hi", "hii", "hello", "hey", "namaste" ──
+ const isGreeting = /^(hi+|hello+|hey+|hola+|namaste|good\s*(morning|afternoon|evening|night))\b/i.test(text) || 
+                    ['hi','hii','hiii','hiiii','hello','helloo','hey','heyy','hola'].includes(text);
+ if(isGreeting){
+   const meal = getMealContext();
+   const greetings = {
+     breakfast: `Hii! 🌴 Good morning! I am Joy, your 24/7 assistant at ${S.hotel.name}.\n\nReady for breakfast by the sea? How about fresh rolls and a warm cup of Masala Chai? Ask me about morning specials, WiFi, or pool timings!`,
+     lunch: `Hello! 🌊 Good afternoon! It's lunch time at ${S.hotel.name}.\n\nCraving our fresh Stuffed Pomfret, Relax Special Chicken, or a hearty Thali? I am Joy, ask me about dishes, drinks, or order right to your room!`,
+     snacks: `Hii! 🌅 Good evening! Golden hour is chai & snacks time.\n\nUnwind with a chilled Fresh Lime Soda or hot tea with crispy spring rolls! I am Joy, ask me about snacks, WiFi, or room assistance.`,
+     dinner: `Hello! 🌙 Good evening! Time for a delicious dinner feast delivered to your room.\n\nSavor our Relax Special Chicken, Mutton Zam-Zam, or creamy Paneer Nawabi! What are you craving tonight?`,
+     night: `Hii! 🌙 Good night! I am Joy, your 24/7 assistant at ${S.hotel.name}.\n\nDrift off to the calm sound of the waves. If you need WiFi info or morning timings, I am here anytime!`
+   };
+   return greetings[meal] || `Hello! 🌴 Welcome to ${S.hotel.name}. I am Joy, your 24/7 digital assistant. How can I help you unwind today?`;
+ }
+
  // ── STEP 0: Detect veg/non-veg INTENT first so it can filter everything below ──
  const isNonVegIntent = text.includes('non-veg') || text.includes('non veg') || text.includes('nonveg') ||
                         text.includes('chicken') || text.includes('fish') || text.includes('mutton') ||
@@ -335,9 +452,12 @@ function smartReply(q){
 
  // 9. Suggestion
  if(text.includes('suggest') || text.includes('recommend') || text.includes('special') || text.includes('dish') || text.includes('surprise') || text.includes('best')){
-   if(activeItems.length){
-     const pick = activeItems[Math.floor(Math.random() * activeItems.length)];
-     return `🌴 How about trying our *${pick.n}* (${pick.category}) for ₹${pick.p || 'N/A'}? ${pick.d || 'A guest favorite!'}\n\nTap "Order Food" to order!`;
+   const meal = getMealContext();
+   const pool = getMealItems(meal, activeItems);
+   const candidates = pool.length ? pool : activeItems;
+   if(candidates.length){
+     const pick = candidates[Math.floor(Math.random() * candidates.length)];
+     return `🌴 For this time of day, how about trying our *${pick.n}* (${pick.category}) for ₹${pick.p || 'N/A'}? ${pick.d || 'A guest favorite!'}\n\nTap "Order Food" to order!`;
    }
  }
 
