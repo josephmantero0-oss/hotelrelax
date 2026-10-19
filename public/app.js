@@ -57,6 +57,39 @@ function getMealContext(){
   return 'night';
 }
 
+const TIME_SUGGESTIONS = {
+  breakfast: [
+    "Rise and shine! 🌾 Fresh morning air + warm breakfast and hot chai = perfect start.",
+    "Breakfast in the countryside? ☕ Warm up with fresh Poha, omelettes and morning tea.",
+    "Start your day relaxed! Order fresh breakfast and tea right to your room 🛌🍳",
+    "Morning sun is rising over the fields. Time for a refreshing sip of hot Masala Chai!"
+  ],
+  lunch: [
+    "Lunch time! 🍛 Savor our coastal specialties, Stuffed Pomfret, or Relax Special Chicken!",
+    "Sun is high, hunger is real! 🤤 Treat yourself to a hearty Veg or Chicken Curry Thali.",
+    "Fresh coastal catch and rich handi curries are calling your name today 🌾",
+    "Starters or full meal? Why not both! The kitchen is tossing fresh flavors 👨‍🍳",
+    "Midday treat: Chilled Lime Soda with a sizzling chicken starter 😋"
+  ],
+  snacks: [
+    "Golden sunset hour! 🌇 Grab a chilled Lime Soda or hot Chai with crispy Spring Rolls.",
+    "Afternoon stroll done? Time for evening snacks and cool refreshments 🍹",
+    "Golden fields and crispy bites: Chicken Salt & Pepper or Veg Rolls hit just right!",
+    "Sip, snack and unwind: Tap Order Food for evening refreshments to your room."
+  ],
+  dinner: [
+    "Dinner under the stars! 🌙 Relax Special Chicken, Mutton Zam-Zam, or creamy Paneer Nawabi?",
+    "Countryside breeze, calm vibes, great food. Treat yourself to a royal dinner feast delivered to your room 🍽️",
+    "Starters first or straight to curry? Squid Masala and Butter Chicken are tonight's stars 🌟",
+    "Cap off your day with sweet warm Gulab Jamun! You deserve it 🍯"
+  ],
+  night: [
+    "The fields are asleep. 🌙 Listen to the quiet night and drift off. Sweet dreams!",
+    "Night owl spotted! 🦉 Relax, drift off, and let tomorrow bring more delicious food.",
+    "Sleep deep tonight in the calm countryside breeze 😴 Hot breakfast starts fresh at 7 AM!"
+  ]
+};
+
 function getMealItems(meal, allItems){
   if(meal === 'breakfast'){
     const bk = allItems.filter(i => {
@@ -93,15 +126,59 @@ function getMealItems(meal, allItems){
 
 const hi=()=>{const h=new Date().getHours();return h<5||h>=21?['Good night','The fields are asleep. Rest well, sweet dreams.']:h<12?['Good morning','The fields are waking up. Make yourself at home.']:h<17?['Good afternoon','Take it slow. There is no rush in the countryside.']:['Good evening','The sun is setting over the fields. Come, sit and unwind.']};
 const TIPS=['Tap the signposts for WiFi, menu and more.','Hungry? Try Chef\u2019s pick on the menu.','The house rules are on the board below.','Enjoyed your stay? Sign our guestbook with a review.','Tap the picture again, the windmill loves to spin!'];let ti=0;
-function say(m){const b=$('#say');if(b)b.textContent=m}
+function say(m){
+  const b=$('#say');
+  if(!b)return;
+  b.textContent=m;
+  b.classList.remove('pop');
+  void b.offsetWidth;
+  b.classList.add('pop');
+}
 function owl(){
   const m=$('#mill');
   if(m){m.classList.add('fast');setTimeout(()=>m.classList.remove('fast'),2600)}
   const meal = getMealContext();
-  const tips = TIME_SUGGESTIONS[meal] || TIME_SUGGESTIONS.lunch;
-  const tip = tips[ti++ % tips.length];
+  const quotes = TIME_SUGGESTIONS[meal] || TIME_SUGGESTIONS.lunch;
+  
+  // Real live food suggestions from the menu for this specific meal time
+  const all = S.menu.flatMap(c => (c.items||[]).map(i=>({...i, category:c.cat}))).filter(i => i.a && (!vegOnly || i.v));
+  const pool = getMealItems(meal, all).filter(i => i.a && (!vegOnly || i.v));
+  const foodItems = pool.length ? pool : all;
+  
+  const foodieSuggestions = foodItems.map(it => {
+    const pStr = it.p ? ` (₹${it.p})` : '';
+    const descStr = it.d ? ` - ${it.d}` : '';
+    const templates = [
+      `Craving good food? Try our *${it.n}*${pStr}! 🤤`,
+      `Chef's pick for right now: *${it.n}*${pStr}${descStr} 🌾`,
+      `How about some hot *${it.n}*${pStr}? Tap Order Food to order! 🛎️`,
+      `Guest favorite: *${it.n}*! Cooked fresh to order 👨‍🍳`,
+      `Treat yourself: *${it.n}*${pStr} delivered right to your room 🛌🍽️`
+    ];
+    return templates[Math.floor(Math.random() * templates.length)];
+  });
+
+  const hotelTips = [
+    'Tap the WiFi tile on the board below, the password is ready 📶',
+    'Want food delivered to your room? Tap "Order Food" to order on WhatsApp 🛎️',
+    'House rules and checkout timings are on the board below 📜',
+    'Enjoying your stay? Sign our guestbook with a Google review ⭐',
+    'Tap the picture again, the windmill loves to spin! 🌾'
+  ];
+
+  // Interleave time quotes, food suggestions, and helpful tips
+  const combined = [];
+  const maxLen = Math.max(quotes.length, foodieSuggestions.length, hotelTips.length);
+  for(let idx = 0; idx < maxLen; idx++){
+    if(quotes[idx % quotes.length]) combined.push(quotes[idx % quotes.length]);
+    if(foodieSuggestions[idx % foodieSuggestions.length]) combined.push(foodieSuggestions[idx % foodieSuggestions.length]);
+    if(hotelTips[idx % hotelTips.length]) combined.push(hotelTips[idx % hotelTips.length]);
+  }
+
+  const finalPool = combined.length ? combined : quotes;
+  const tip = finalPool[ti++ % finalPool.length];
   say(tip);
-  boom($('#dio'));
+  boom($('#dio') || $('#hero'));
 }
 function boom(el){
   const r=(el||document.body).getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2,c=['#e5b755','#b3452f','#6d8a57','#f3e6cc','#8a5a35'];
@@ -139,13 +216,13 @@ function guest(){
  const dt=new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short'}).toUpperCase(),nm=S.hotel.name.replace(/^hotel\s+/i,'').split(/\s+/)[0].toUpperCase();
  const nt=S.notices.slice().reverse().map(n=>`<div class="card note rv"><b>From reception</b><p style="margin:6px 0 4px">${esc(n.t)}</p><small>${esc(n.time)}</small></div>`).join('');
  return `<div class="adm"><button data-act="login">Admin</button></div><div class="wrap">
- <header class="hero" id="hero"><div class="postcard"><div class="stamp"><b>★★★</b>3 STAR</div><div class="pm"><span>${esc(nm)}</span><span>${dt}</span></div>
+ <header class="hero" id="hero"><div class="postcard" data-act="owl"><div class="stamp"><b>★★★</b>3 STAR</div><div class="pm"><span>${esc(nm)}</span><span>${dt}</span></div>
  <div class="diorama" data-act="owl" id="dio" style="--s1:${c.s[0]};--s2:${c.s[1]};--o:${c.o};--h1:${c.h[0]};--h2:${c.h[1]};--h3:${c.h[2]}"><div class="dtilt" id="dtilt">
  <div class="ly sky">${T.n?'<i class="stars"></i>':''}<i class="sun" style="left:${T.l}%;top:${T.tp}%"></i><i class="cl"></i><i class="cl c2"></i></div>
  <div class="ly far"></div><div class="ly mid"><div class="mill" id="mill"><i class="tw"></i><div class="bl"><i></i><i></i><i></i><i></i></div></div></div><div class="ly near"><i class="barn"></i></div><div class="ly fg"><i class="fence"></i></div>
  <i class="bird"></i><i class="bird b2"></i><i class="bird b3"></i></div></div>
- <p class="dear">${esc(H[0])}, dear guest!</p><h1>${esc(S.hotel.name)}</h1><p class="sub">${esc(S.hotel.tagline)}</p><p class="hand" id="say">${esc(H[1])}</p></div>
- <p class="hint">Tap the picture ↑</p></header>
+ <p class="dear">${esc(H[0])}, dear guest!</p><h1>${esc(S.hotel.name)}</h1><p class="sub">${esc(S.hotel.tagline)}</p><p class="hand" id="say" data-act="owl">${esc(H[1])}</p></div>
+ <p class="hint" data-act="owl">Tap the picture ↑</p></header>
  <div class="div">🌾 🌻 🌾</div>
  ${nt}
  <nav class="qa rv"><button class="tile" data-act="food"><span>🛎️</span>Order Food</button><button class="tile" data-act="order"><span>🧴</span>Request</button><button class="tile" data-act="go" data-t="wifi"><span>📶</span>WiFi</button><button class="tile" data-act="go" data-t="menu"><span>🍽️</span>Menu</button><button class="tile" data-act="go" data-t="rules"><span>📜</span>House Rules</button>${rv?`<a class="tile" href="${esc(rv)}" target="_blank" rel="noopener"><span>⭐</span>Guestbook</a>`:''}${ph?`<a class="tile" href="tel:${ph}"><span>📞</span>Call Reception</a>`:''}</nav>
