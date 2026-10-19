@@ -40,14 +40,13 @@ function menuBlock(){
 }
 
 function tod(){
- const d=new Date(),h=d.getHours()+d.getMinutes()/60,t=Math.min(1,Math.max(0,(h-6)/13.5));let k;
- if(h<6||h>=19.5)k={n:true,s:['#0b1530','#1b2f5e'],w:['#123456','#0c2442','#081a32'],o:'#e8ecff',pc:'#0a1a22'};
- else if(h<10.5)k={n:false,s:['#f7a8b8','#ffe2b3'],w:['#4bb5c4','#2c8aa6','#1d6a8a'],o:'#fff1b8',pc:'#1d4a3e'};
- else if(h<16.5)k={n:false,s:['#5ec3f0','#c4efff'],w:['#35bfd8','#1fa0c6','#0e7fae'],o:'#fffbe0',pc:'#1d6a52'};
- else k={n:false,s:['#4a3f86','#ff9a6b'],w:['#9a5a8a','#5a3f7a','#33295c'],o:'#ffb347',pc:'#1a1830'};
- k.l=k.n?76:10+t*80;k.tp=k.n?14:60-Math.sin(t*Math.PI)*46;return k;
+  const d=new Date(),h=d.getHours()+d.getMinutes()/60,n=h<6||h>=19,t=Math.min(1,Math.max(0,(h-6)/13));
+  const c=n?{s:['#1d2b64','#5b4b8a'],o:'#e8eaff',h:['#3c5a58','#2c4a46','#23403a']}:
+           h<11?{s:['#ffcfa3','#fff1cf'],o:'#fff0a8',h:['#b7d19a','#8fb872','#6d9a54']}:
+           h<17?{s:['#9bd6f2','#e6f6fb'],o:'#fff6c4',h:['#a9d6a0','#7fc07a','#5fa65e']}:
+           {s:['#ff9a76','#ffd9a8'],o:'#ffe0a0',h:['#c9b96a','#a5a350','#7f8c44']};
+  return {n,c,l:n?70:8+t*70,tp:n?12:58-Math.sin(t*Math.PI)*46};
 }
-const palm=c=>`<i class="palm ${c}">${[-165,-130,-95,-60,-25,15,165].map(a=>`<b style="transform:rotate(${a}deg)"></b>`).join('')}</i>`;
 
 function getMealContext(){
   const h = new Date().getHours() + new Date().getMinutes() / 60;
@@ -57,38 +56,6 @@ function getMealContext(){
   if(h >= 19 && h < 23) return 'dinner';
   return 'night';
 }
-
-const TIME_SUGGESTIONS = {
-  breakfast: [
-    "Rise and shine! 🌴 Ocean breeze + warm breakfast and fresh chai = perfect morning.",
-    "Breakfast with a sea view? ☕ Warm up with fresh rolls, tea, and morning specials.",
-    "Start your day lazy! Order fresh breakfast and tea right to your bed 🛌🍳",
-    "Morning tide is calm, sun is up. Time for a refreshing sip of hot Masala Chai!"
-  ],
-  lunch: [
-    "Lunch by the sea! 🍛 Savor our Stuffed Pomfret, Chonak Rawa Fry, or Relax Special Chicken!",
-    "Sun is high, hunger is real! 🤤 Treat yourself to a hearty Veg or Chicken Curry Thali.",
-    "Seafood lover? Today's fresh coastal fish and squid masala are calling your name 🐟",
-    "Starters or full meal? Why not both! The kitchen is tossing fresh catch 👨‍🍳",
-    "Midday treat: Chilled Lime Soda with a sizzling chicken starter 😋"
-  ],
-  snacks: [
-    "Golden sunset hour! 🌇 Grab a chilled Lime Soda or hot Chai with crispy Spring Rolls.",
-    "Afternoon dip done? Time for evening snacks and cool refreshments by the pool 🍹",
-    "Sun, sea and crispy bites: Chicken Salt & Pepper or Veg Rolls hit just right!",
-    "Sip, snack and unwind: Tap Order Food for evening refreshments to your room."
-  ],
-  dinner: [
-    "Dinner under the stars! 🌙 Relax Special Chicken, Mutton Zam-Zam, or creamy Paneer Nawabi?",
-    "Sea breeze, good vibes, great food. Treat yourself to a royal dinner feast delivered to your room 🍽️",
-    "Starters first or straight to curry? Squid Masala and Butter Chicken are tonight's stars 🌟",
-    "Cap off your day with sweet warm Gulab Jamun! You deserve it 🍯"
-  ],
-  night: [
-    "Listen to the waves crashing and drift off. 🌊 Sweet dreams!",
-    "Late night owl! 🦉 Sleep deep tonight, the ocean and hot breakfast await you tomorrow."
-  ]
-};
 
 function getMealItems(meal, allItems){
   if(meal === 'breakfast'){
@@ -124,19 +91,28 @@ function getMealItems(meal, allItems){
   return allItems;
 }
 
-const hi=()=>{const h=new Date().getHours();return h<5||h>=21?['Good night','Listen to the waves and drift off. Sleep well.']:h<12?['Good morning','Rise and shine. The sea is calm and the day is yours.']:h<17?['Good afternoon','Take it easy. Sun, sea and nothing to do.']:['Good evening','Golden hour. Grab a drink and watch the sky glow.']};
-const TIPS=['Tap WiFi for the network and password.','Hungry? Try Surprise me on the menu.','House rules are just below.','Enjoyed your stay? A kind review makes our day.','Tap the sea again and watch the waves go.'];let ti=0;
+const hi=()=>{const h=new Date().getHours();return h<5||h>=21?['Good night','The fields are asleep. Rest well, sweet dreams.']:h<12?['Good morning','The fields are waking up. Make yourself at home.']:h<17?['Good afternoon','Take it slow. There is no rush in the countryside.']:['Good evening','The sun is setting over the fields. Come, sit and unwind.']};
+const TIPS=['Tap the signposts for WiFi, menu and more.','Hungry? Try Chef\u2019s pick on the menu.','The house rules are on the board below.','Enjoyed your stay? Sign our guestbook with a review.','Tap the picture again, the windmill loves to spin!'];let ti=0;
 function say(m){const b=$('#say');if(b)b.textContent=m}
 function owl(){
-  const e=$('#sea');
-  if(e){e.classList.add('rock');setTimeout(()=>e.classList.remove('rock'),2200)}
+  const m=$('#mill');
+  if(m){m.classList.add('fast');setTimeout(()=>m.classList.remove('fast'),2600)}
   const meal = getMealContext();
   const tips = TIME_SUGGESTIONS[meal] || TIME_SUGGESTIONS.lunch;
   const tip = tips[ti++ % tips.length];
   say(tip);
-  boom($('#sea'));
+  boom($('#dio'));
 }
-function boom(el){const r=(el||document.body).getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2,c=['#ff7a59','#ffc857','#4fd1c5','#ffffff','#c9b6ff'];for(let i=0;i<20;i++){const d=document.createElement('i');d.className='cf';d.style.cssText=`left:${x}px;top:${y}px;background:${c[i%5]};--dx:${(Math.random()-.5)*280}px;--dy:${-60-Math.random()*150}px`;document.body.appendChild(d);setTimeout(()=>d.remove(),1400)}}
+function boom(el){
+  const r=(el||document.body).getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2,c=['#e5b755','#b3452f','#6d8a57','#f3e6cc','#8a5a35'];
+  for(let i=0;i<20;i++){
+    const d=document.createElement('i');
+    d.className='cf';
+    d.style.cssText=`left:${x}px;top:${y}px;background:${c[i%5]};--dx:${(Math.random()-.5)*280}px;--dy:${-60-Math.random()*140}px;--r:${Math.random()*720}deg`;
+    document.body.appendChild(d);
+    setTimeout(()=>d.remove(),1200);
+  }
+}
 function pick(t){
   const meal = getMealContext();
   const all = S.menu.flatMap(c => (c.items||[]).map(i=>({...i, category:c.cat}))).filter(i => i.a && (!vegOnly || i.v));
@@ -146,40 +122,41 @@ function pick(t){
   if(!finalPool.length){e.innerHTML='<p class="mu">Nothing to suggest right now.</p>';return}
   const it = finalPool[Math.floor(Math.random() * finalPool.length)];
   const mealLabels = {
-    breakfast: '🌅 Breakfast pick',
-    lunch: '🍛 Lunch recommendation',
-    snacks: '☕ Evening snack pick',
-    dinner: '🌙 Dinner recommendation',
-    night: '🦉 Late night pick'
+    breakfast: '🌾 Breakfast pick',
+    lunch: '🌾 Lunch recommendation',
+    snacks: '🌾 Evening snack pick',
+    dinner: '🌾 Dinner recommendation',
+    night: '🌾 Chef\'s pick'
   };
-  const label = mealLabels[meal] || '🌴 Chef suggestion';
+  const label = mealLabels[meal] || '🌾 Chef\'s pick';
   e.innerHTML = `<div class="pickc"><small>${label}</small><b>${esc(it.n)}</b><span>${it.p ? '₹' + esc(it.p) + ' · ' : ''}${esc(it.d)}</span></div>`;
-  say('How about our ' + it.n + '? 😋');
+  say('Try our ' + it.n + '! Good honest food 🤤');
   boom(t);
 }
 
 function guest(){
- const ph=String(S.hotel.phone).replace(/[^+\d]/g,''),rv=url(S.review),H=hi(),T=tod();
+ const ph=String(S.hotel.phone).replace(/[^+\d]/g,''),rv=url(S.review),H=hi(),T=tod(),c=T.c;
+ const dt=new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short'}).toUpperCase(),nm=S.hotel.name.replace(/^hotel\s+/i,'').split(/\s+/)[0].toUpperCase();
  const nt=S.notices.slice().reverse().map(n=>`<div class="card note rv"><b>From reception</b><p style="margin:6px 0 4px">${esc(n.t)}</p><small>${esc(n.time)}</small></div>`).join('');
  return `<div class="adm"><button data-act="login">Admin</button></div><div class="wrap">
- <header class="hero" id="hero"><div class="sea3" id="sea" data-act="owl" style="--s1:${T.s[0]};--s2:${T.s[1]};--w1:${T.w[0]};--w2:${T.w[1]};--w3:${T.w[2]};--o:${T.o};--pc:${T.pc}"><div class="dtilt" id="dtilt">
- <div class="ly sky">${T.n?'<i class="stars"></i>':''}<i class="sun3" style="left:${T.l}%;top:${T.tp}%"></i><i class="cl"></i><i class="cl c2"></i></div>
- <div class="ly water"><i class="glint" style="left:${T.l}%"></i><i class="wv a"></i><div class="boat"><i class="hull"></i><i class="sail sl1"></i><i class="sail sl2"></i></div></div>
- <div class="ly mid"><i class="wv b"></i></div><div class="ly near"><i class="wv c"></i>${palm('l')}${palm('r')}</div><div class="ly fg"><i class="sand"></i></div>
- <i class="bird"></i><i class="bird b2"></i></div></div>
- <p class="hint">Tap the sea</p><p class="eyebrow">${esc(H[0])}</p><h1>${esc(S.hotel.name)}</h1><p class="sub">${esc(S.hotel.tagline)}</p><p class="say" id="say">${esc(H[1])}</p></header>
- <div class="div"></div>
+ <header class="hero" id="hero"><div class="postcard"><div class="stamp"><b>★★★</b>3 STAR</div><div class="pm"><span>${esc(nm)}</span><span>${dt}</span></div>
+ <div class="diorama" data-act="owl" id="dio" style="--s1:${c.s[0]};--s2:${c.s[1]};--o:${c.o};--h1:${c.h[0]};--h2:${c.h[1]};--h3:${c.h[2]}"><div class="dtilt" id="dtilt">
+ <div class="ly sky">${T.n?'<i class="stars"></i>':''}<i class="sun" style="left:${T.l}%;top:${T.tp}%"></i><i class="cl"></i><i class="cl c2"></i></div>
+ <div class="ly far"></div><div class="ly mid"><div class="mill" id="mill"><i class="tw"></i><div class="bl"><i></i><i></i><i></i><i></i></div></div></div><div class="ly near"><i class="barn"></i></div><div class="ly fg"><i class="fence"></i></div>
+ <i class="bird"></i><i class="bird b2"></i><i class="bird b3"></i></div></div>
+ <p class="dear">${esc(H[0])}, dear guest!</p><h1>${esc(S.hotel.name)}</h1><p class="sub">${esc(S.hotel.tagline)}</p><p class="hand" id="say">${esc(H[1])}</p></div>
+ <p class="hint">Tap the picture ↑</p></header>
+ <div class="div">🌾 🌻 🌾</div>
  ${nt}
- <nav class="qa rv"><button class="tile" data-act="food">${ic('bell')}Order Food</button><button class="tile" data-act="order">${ic('bottle')}Request</button><button class="tile" data-act="go" data-t="wifi">${ic('wifi')}WiFi</button><button class="tile" data-act="go" data-t="menu">${ic('menu')}Menu</button><button class="tile" data-act="go" data-t="rules">${ic('rules')}Rules</button>${rv?`<a class="tile" href="${esc(rv)}" target="_blank" rel="noopener">${ic('star')}Review</a>`:''}${ph?`<a class="tile" href="tel:${ph}">${ic('phone')}Call</a>`:''}</nav>
- <section class="card rv" id="wifi"><h2>WiFi</h2><div class="kv"><span class="mu">Network</span><b>${esc(S.wifi.name)}</b></div><div class="kv"><span class="mu">Password</span><b>${esc(S.wifi.pass)}</b></div><div class="bar" style="margin:12px 0 0"><button class="btn" data-act="copy" data-v="${esc(S.wifi.pass)}">Copy password</button><button class="btn g" data-act="copy" data-v="${esc(S.wifi.name)}">Copy name</button></div></section>
- <section class="card rv" id="menu"><h2>Menu</h2><div class="tools"><input id="q" type="search" placeholder="Search dishes…" value="${esc(q)}"><label class="sw"><input type="checkbox" id="vg" ${vegOnly?'checked':''}>Veg only</label></div><div class="bar" style="justify-content:flex-start;gap:10px"><button class="btn" data-act="food">Order food</button><button class="btn g" data-act="pick">Surprise me</button></div><div id="pick"></div><div id="mm">${menuBlock()}</div><button class="btn" style="width:100%;margin-top:16px" data-act="food">Order food to your room</button></section>
+ <nav class="qa rv"><button class="tile" data-act="food"><span>🛎️</span>Order Food</button><button class="tile" data-act="order"><span>🧴</span>Request</button><button class="tile" data-act="go" data-t="wifi"><span>📶</span>WiFi</button><button class="tile" data-act="go" data-t="menu"><span>🍽️</span>Menu</button><button class="tile" data-act="go" data-t="rules"><span>📜</span>House Rules</button>${rv?`<a class="tile" href="${esc(rv)}" target="_blank" rel="noopener"><span>⭐</span>Guestbook</a>`:''}${ph?`<a class="tile" href="tel:${ph}"><span>📞</span>Call Reception</a>`:''}</nav>
+ <section class="card board rv" id="wifi"><h2>WiFi</h2><div class="kv"><span class="mu">Network</span><b>${esc(S.wifi.name)}</b></div><div class="kv"><span class="mu">Password</span><b>${esc(S.wifi.pass)}</b></div><div class="bar" style="margin:12px 0 0"><button class="btn" data-act="copy" data-v="${esc(S.wifi.pass)}">Copy password</button><button class="btn g" data-act="copy" data-v="${esc(S.wifi.name)}">Copy name</button></div></section>
+ <section class="card rv" id="menu"><h2>Menu</h2><div class="tools"><input id="q" type="search" placeholder="Search dishes…" value="${esc(q)}"><label class="sw"><input type="checkbox" id="vg" ${vegOnly?'checked':''}>Veg only</label></div><div class="bar" style="justify-content:flex-start;gap:10px"><button class="btn" data-act="food">🛎️ Order food</button><button class="btn g" data-act="pick">🌾 Chef's pick</button></div><div id="pick"></div><div id="mm">${menuBlock()}</div><button class="btn" style="width:100%;margin-top:16px" data-act="food">🛎️ Order food to your room</button></section>
  <section class="card rv" id="rules"><h2>House rules</h2><ol>${S.rules.map(r=>`<li>${esc(r)}</li>`).join('')}</ol></section>
- ${rv?`<section class="card rv" id="review"><h2>Share your stay</h2><p style="margin-top:0">If you had a lovely time, a kind Google review would make our day.</p><a class="btn" href="${esc(rv)}" target="_blank" rel="noopener">Leave a review</a></section>`:''}
- <div class="div" style="margin-top:30px"></div><p class="foot">Thank you for staying with ${esc(S.hotel.name)}</p></div>
- <nav class="dock"><button data-act="go" data-t="top">${ic('home')}Home</button><button data-act="go" data-t="menu">${ic('menu')}Menu</button><button data-act="food">${ic('bell')}Order</button><button data-act="go" data-t="wifi">${ic('wifi')}WiFi</button><button data-act="go" data-t="rules">${ic('rules')}Rules</button></nav>
+ ${rv?`<section class="card rv" id="review"><h2>Sign our guestbook</h2><p style="margin-top:0">Enjoyed your stay with us? A kind Google review would mean the world to our team.</p><a class="btn" href="${esc(rv)}" target="_blank" rel="noopener">✍️ Write a review</a></section>`:''}
+ <div class="div" style="margin-top:30px">🌾 🌻 🌾</div><p class="foot">Fresh air, warm hearts. Thank you for staying with ${esc(S.hotel.name)}.</p></div>
+ <nav class="dock"><button data-act="go" data-t="top"><span>🏠</span>Home</button><button data-act="go" data-t="menu"><span>🍽️</span>Menu</button><button data-act="food"><span>🛎️</span>Order</button><button data-act="go" data-t="wifi"><span>📶</span>WiFi</button><button data-act="go" data-t="rules"><span>📜</span>Rules</button></nav>
  ${foodPage()}${orderUI()}${chatUI()}${login?loginModal():''}`;
 }
-
 function inp(k,v,ph,cls){return `<input ${cls?`class="${cls}" `:''}data-k="${k}" value="${esc(v)}" placeholder="${ph}">`}
 function adminView(){
  let b='';
@@ -308,7 +285,7 @@ function smartReply(q){
  if(isGreeting){
    const meal = getMealContext();
    const greetings = {
-     breakfast: `Hii! 🌴 Good morning! I am Joy, your 24/7 assistant at ${S.hotel.name}.\n\nReady for breakfast by the sea? How about fresh rolls and a warm cup of Masala Chai? Ask me about morning specials, WiFi, or pool timings!`,
+     breakfast: `Hii! 🌴 Good morning! I am Joy, your 24/7 assistant at ${S.hotel.name}.\n\nReady for fresh breakfast in the countryside? How about warm Poha, Masala Omelette, and hot cutting Chai? Ask me about morning specials, WiFi, or room assistance!`,
      lunch: `Hello! 🌊 Good afternoon! It's lunch time at ${S.hotel.name}.\n\nCraving our fresh Stuffed Pomfret, Relax Special Chicken, or a hearty Thali? I am Joy, ask me about dishes, drinks, or order right to your room!`,
      snacks: `Hii! 🌅 Good evening! Golden hour is chai & snacks time.\n\nUnwind with a chilled Fresh Lime Soda or hot tea with crispy spring rolls! I am Joy, ask me about snacks, WiFi, or room assistance.`,
      dinner: `Hello! 🌙 Good evening! Time for a delicious dinner feast delivered to your room.\n\nSavor our Relax Special Chicken, Mutton Zam-Zam, or creamy Paneer Nawabi! What are you craving tonight?`,
@@ -613,7 +590,7 @@ function sendOrder(kind,tab){ord.err=validate(tab);const e=$(tab==='food'?'#ferr
 
 document.addEventListener('input',e=>{const i=e.target.id,v=e.target.value;if(i==='on'||i==='fn')ord.name=v;else if(i==='or'||i==='fr')ord.room=v;else if(i==='ox'||i==='fx')ord.note=v;else if(i==='omsg'){ord.msg=v;const f=$('#ofw');if(f)f.innerHTML=obar()}else if(i==='fs'){fp.q=v;const l=$('#flist');if(l)l.innerHTML=fList()}else if(i==='fv'){fp.veg=e.target.checked;const l=$('#flist');if(l)l.innerHTML=fList()}});
 
-document.addEventListener('pointermove',e=>{const t=$('#dtilt'),h=$('#hero');if(!t||!h)return;const r=h.getBoundingClientRect(),cl=v=>Math.max(-.5,Math.min(.5,v));t.style.setProperty('--rx',(cl((e.clientX-r.left)/r.width-.5)*10).toFixed(1));t.style.setProperty('--ry',(-cl((e.clientY-r.top)/r.height-.5)*8).toFixed(1))});
+document.addEventListener('pointermove',e=>{const t=$('#dtilt'),d=$('#dio');if(!t||!d)return;const r=d.getBoundingClientRect(),cl=v=>Math.max(-.5,Math.min(.5,v)),x=cl((e.clientX-r.left)/r.width-.5),y=cl((e.clientY-r.top)/r.height-.5);t.style.setProperty('--ry',(x*16).toFixed(1));t.style.setProperty('--rx',(-y*12).toFixed(1))});
 
 const CFG=window.APP_CONFIG||{};
 const SB=(window.supabase&&CFG.SUPABASE_URL&&CFG.SUPABASE_ANON_KEY&&!/PASTE_/.test(CFG.SUPABASE_ANON_KEY))?window.supabase.createClient(CFG.SUPABASE_URL,CFG.SUPABASE_ANON_KEY):null;
