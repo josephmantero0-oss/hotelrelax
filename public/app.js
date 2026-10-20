@@ -242,17 +242,17 @@ function guest(){
 function inp(k,v,ph,cls){return `<input ${cls?`class="${cls}" `:''}data-k="${k}" value="${esc(v)}" placeholder="${ph}">`}
 function adminView(){
  let b='';
- const kActive = liveOrders.filter(o=>(!o.type||o.type==='restaurant:relax'||o.type==='restaurant')&&o.status!=='delivered'&&o.status!=='rejected').length;
- const sActive = liveOrders.filter(o=>(o.type==='hotel:relax'||o.type==='hotel')&&o.status!=='completed').length;
+ const kActive = liveOrders.filter(o=>o.type==='restaurant:relax'&&o.status!=='delivered'&&o.status!=='rejected').length;
+ const sActive = liveOrders.filter(o=>o.type==='hotel:relax'&&o.status!=='completed').length;
 
  if(tab==='kitchen'){
    const rList = liveOrders.filter(o=>{
-     const match = (!o.type || o.type==='restaurant:relax' || o.type==='restaurant');
+     const match = (o.type==='restaurant:relax');
      if(!match) return false;
      return kitchenFilter==='active' ? (o.status!=='delivered'&&o.status!=='rejected') : (o.status==='delivered'||o.status==='rejected');
    });
-   const actCount = liveOrders.filter(o=>(!o.type||o.type==='restaurant:relax'||o.type==='restaurant')&&o.status!=='delivered'&&o.status!=='rejected').length;
-   const histCount = liveOrders.filter(o=>(!o.type||o.type==='restaurant:relax'||o.type==='restaurant')&&(o.status==='delivered'||o.status==='rejected')).length;
+   const actCount = liveOrders.filter(o=>o.type==='restaurant:relax'&&o.status!=='delivered'&&o.status!=='rejected').length;
+   const histCount = liveOrders.filter(o=>o.type==='restaurant:relax'&&(o.status==='delivered'||o.status==='rejected')).length;
 
    b = `<div class="card" style="margin-top:14px">
      <div class="dtopbar">
@@ -305,7 +305,7 @@ function adminView(){
  }
 
  if(tab==='staff'){
-   const sList = liveOrders.filter(o=>(o.type==='hotel:relax'||o.type==='hotel')&&o.status!=='completed');
+   const sList = liveOrders.filter(o=>o.type==='hotel:relax'&&o.status!=='completed');
    b = `<div class="card" style="margin-top:14px">
      <div class="dtopbar">
        <div class="dpulse"><i></i><b>FRONT DESK SERVICE REQUESTS</b></div>
@@ -759,7 +759,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='cin')
 
 let adminTab='kitchen',kitchenFilter='active',liveOrders=[],soundEnabled=true,lastKnownOrderIds=new Set();
 function playChime(){
-  if(!soundEnabled || !admin)return;
+  if(!soundEnabled || !admin || isRoomLocked)return;
   try{
     const A=window.AudioContext||window.webkitAudioContext;if(!A)return;
     const c=new A(),o=c.createOscillator(),g=c.createGain();
@@ -899,7 +899,7 @@ function fetchLiveOrders(){
   if(!SB) return;
   SB.from('orders')
     .select('*')
-    .in('type', ['restaurant:relax', 'hotel:relax', 'restaurant', 'hotel'])
+    .in('type', ['restaurant:relax', 'hotel:relax'])
     .order('created_at', { ascending: false })
     .limit(100)
     .then(({data, error}) => {
@@ -912,7 +912,7 @@ function fetchLiveOrders(){
         }
       });
       liveOrders = data;
-      if(hasNew && admin && soundEnabled) {
+      if(hasNew && admin && !isRoomLocked && soundEnabled) {
         playChime();
       }
       if(admin){
