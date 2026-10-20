@@ -406,13 +406,13 @@ async function act(a,t){
  else if(a==='onew'){const k=ord.sentTab||ord.tab;if(k==='msg')ord.msg='';else Object.keys(ord.cart).forEach(x=>{if(x[0]==='t')delete ord.cart[x]});ord.note='';ord.sent='';ord.view='browse';paintOrder()}
  else if(a==='oview'){if(ord.tab==='toil'&&!cnt('toil'))return;if(ord.tab==='msg'&&!ord.msg.trim())return;ord.view='checkout';ord.err='';paintOrder();const d=$('#odyn');if(d)d.scrollTo(0,0)}
  else if(a==='obackbrowse'){ord.view='browse';paintOrder()}
- else if(a==='food'){if(!S.order.on)return toast('Ordering is switched off right now. Please call reception.');fp.open=true;fp.view='menu';ord.err='';const f=$('#fpage');if(f){f.classList.add('open');paintFood()}}
- else if(a==='fback'){if(fp.view!=='menu'){fp.view='menu';paintFood()}else{fp.open=false;const f=$('#fpage');if(f)f.classList.remove('open')}}
+ else if(a==='food'){if(!S.order.on)return toast('Ordering is switched off right now. Please call reception.');if(fp.sent){Object.keys(ord.cart).forEach(x=>{if(x[0]==='f')delete ord.cart[x]});ord.note='';fp.sent='';}fp.open=true;fp.view='menu';ord.err='';const f=$('#fpage');if(f){f.classList.add('open');paintFood()}}
+ else if(a==='fback'){if(fp.sent){Object.keys(ord.cart).forEach(x=>{if(x[0]==='f')delete ord.cart[x]});ord.note='';fp.sent='';}if(fp.view!=='menu'){fp.view='menu';paintFood()}else{fp.open=false;const f=$('#fpage');if(f)f.classList.remove('open')}}
  else if(a==='fcat'){fp.cat=i;paintFood()}
  else if(a==='freview'){fp.view='checkout';ord.err='';paintFood();const f=$('#fpage');if(f)f.scrollTo(0,0)}
  else if(a==='fwa')sendOrder('wa','food');else if(a==='fsms')sendOrder('sms','food');else if(a==='fcopy')sendOrder('copy','food')
  else if(a==='fcheckback'){fp.view='checkout';paintFood()}
- else if(a==='fnew'){Object.keys(ord.cart).forEach(x=>{if(x[0]==='f')delete ord.cart[x]});ord.note='';fp.view='menu';paintFood()}
+ else if(a==='fnew'||a==='fclear'){Object.keys(ord.cart).forEach(x=>{if(x[0]==='f')delete ord.cart[x]});ord.note='';fp.sent='';fp.view='menu';paintFood()}
  else if(a==='addtoil'){S.toil.push({id:uid(),n:'',p:'',a:true});render()}
  else if(a==='deltoil'){S.toil.splice(i,1);render()}
  else if(a==='chat'){chatToggle()}
@@ -771,8 +771,15 @@ function playChime(){
     o.start();o.stop(c.currentTime+0.6);
   }catch(e){}
 }
-let fp={open:false,cat:0,q:'',veg:false,view:'menu',sent:''};
-try{const g=JSON.parse(localStorage.getItem('rx_guest')||'{}');ord.name=g.name||'';ord.room=g.room||''}catch(e){}
+let ord = { open: false, view: 'browse', tab: 'toil', cart: {}, msg: '', name: '', room: lockedRoom, note: '', sent: '', sentTab: '', err: '' };
+let fp = { open: false, cat: 0, q: '', veg: false, view: 'menu', sent: '' };
+try {
+  const g = JSON.parse(localStorage.getItem('rx_guest') || '{}');
+  if (g.name) ord.name = g.name;
+} catch (e) {}
+if (isRoomLocked) {
+  ord.room = lockedRoom;
+}
 const num=s=>{let d=String(s||'').replace(/\D/g,'');if(d.length===10)d='91'+d;return d.length>=11?d:''};
 const dest=t=>t==='food'?S.order.food:S.order.desk;
 const canOrder=()=>!!(S.order.on&&[S.order.food,S.order.desk].some(d=>num(d.wa)||num(d.sms)));
@@ -837,7 +844,28 @@ function validate(tab){if(isRoomLocked){ord.room=lockedRoom;}if(ord.name.trim().
 function sendOrder(kind,tab){ord.err=validate(tab);const e=$(tab==='food'?'#ferr':'#oerr');if(e)e.textContent=ord.err;if(ord.err)return;
  try{localStorage.setItem('rx_guest',JSON.stringify({name:ord.name.trim()}))}catch(x){}
  if(kind==='copy'){const m=buildMsg(false,tab);(navigator.clipboard?navigator.clipboard.writeText(m):Promise.reject()).then(()=>toast('Order copied')).catch(()=>toast('Copy not available'));return}
- const d=dest(tab),wa=num(d.wa),sm=num(d.sms)||wa,u=kind==='wa'?`https://wa.me/${wa}?text=${encodeURIComponent(buildMsg(true,tab))}`:`sms:+${sm}?&body=${encodeURIComponent(buildMsg(false,tab))}`;
+ const d=dest(tab),wa=num(d.wa),sm=num(d.sms)||wa,u=kind==='wa'?'https://wa.me/'+wa+'?text='+encodeURIComponent(buildMsg(true,tab)):'sms:+'+sm+'?&body='+encodeURIComponent(buildMsg(false,tab));
+ // Background push to Kitchen & Staff Dashboard in Supabase
+ if(SB){
+   const orderId = 'ORD-RLX-' + Date.now().toString().slice(-4) + '-' + Math.floor(100 + Math.random()*900);
+   const isFood = (tab === 'food');
+   const orderPayload = {
+     id: orderId,
+     type: isFood ? 'restaurant:relax' : 'hotel:relax',
+     room: ord.room.trim() + (ord.name.trim() ? ' (' + ord.name.trim() + ')' : ''),
+     items: isFood ? items('food').map(x=>({name:x.n, price:rs(x.p), q:x.q})) : [],
+     total: isFood ? tot('food') : 0,
+     note: isFood ? ord.note.trim() : (ord.msg.trim() || ord.note.trim()),
+     service_title: isFood ? '' : (ord.tab==='msg' ? 'Guest Message' : items('toil').map(x=>x.q+'x '+x.n).join(', ')),
+     status: 'pending',
+     reject_reason: '',
+     created_at: new Date().toISOString(),
+     updated_at: new Date().toISOString()
+   };
+   SB.from('orders').insert(orderPayload).then(()=>{
+     if(typeof fetchLiveOrders === 'function') fetchLiveOrders();
+   }).catch(e=>console.warn('Dashboard sync:', e));
+ }
  const a=document.createElement('a');a.href=u;if(kind==='wa'){a.target='_blank';a.rel='noopener'}document.body.appendChild(a);a.click();a.remove();
  if(tab==='food'){fp.view='sent';fp.sent=kind;paintFood()}else{ord.sent=kind;ord.sentTab=tab;paintOrder()}boom($(tab==='food'?'#fpage':'#osheet'))}
 
@@ -935,7 +963,10 @@ async function boot(){
  if(!SB)return fail('Setup needed','Add your Supabase URL and anon key in config.js');
  try{await fetchConfig()}catch(e){return fail('Could not load site',(e&&e.message)||'Unknown error')}
  AI=true;
+ if(admin && !isRoomLocked) tab = 'kitchen';
+ fetchLiveOrders();
+ setInterval(fetchLiveOrders, 3500);
  render();
- document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden){refresh();fetchLiveOrders();}});
 }
 boot();
