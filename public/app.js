@@ -221,6 +221,7 @@ function guest(){
  <div class="ly sky">${T.n?'<i class="stars"></i>':''}<i class="sun" style="left:${T.l}%;top:${T.tp}%"></i><i class="cl"></i><i class="cl c2"></i></div>
  <div class="ly far"></div><div class="ly mid"><div class="mill" id="mill"><i class="tw"></i><div class="bl"><i></i><i></i><i></i><i></i></div></div></div><div class="ly near"><i class="barn"></i></div><div class="ly fg"><i class="fence"></i></div>
  <i class="bird"></i><i class="bird b2"></i><i class="bird b3"></i></div></div>
+ ${ord.room ? `<div class="room-pill"><span class="r-dot"></span><b>ROOM ${esc(ord.room)}</b><span class="r-vtag">✓ Verified Link</span></div>` : ''}
  <p class="dear">${esc(H[0])}, dear guest!</p><h1>${esc(S.hotel.name)}</h1><p class="sub">${esc(S.hotel.tagline)}</p><p class="hand" id="say" data-act="owl">${esc(H[1])}</p></div>
  <p class="hint" data-act="owl">Tap the picture ↑</p></header>
  <div class="div">🌾 🌻 🌾</div>
@@ -237,11 +238,131 @@ function guest(){
 function inp(k,v,ph,cls){return `<input ${cls?`class="${cls}" `:''}data-k="${k}" value="${esc(v)}" placeholder="${ph}">`}
 function adminView(){
  let b='';
+ const kActive = liveOrders.filter(o=>(!o.type||o.type==='restaurant:relax')&&o.status!=='delivered'&&o.status!=='rejected').length;
+ const sActive = liveOrders.filter(o=>(o.type==='hotel:relax')&&o.status!=='completed').length;
+
+ if(tab==='kitchen'){
+   const rList = liveOrders.filter(o=>{
+     const match = (!o.type || o.type==='restaurant:relax');
+     if(!match) return false;
+     return kitchenFilter==='active' ? (o.status!=='delivered'&&o.status!=='rejected') : (o.status==='delivered'||o.status==='rejected');
+   });
+   const actCount = liveOrders.filter(o=>(!o.type||o.type==='restaurant:relax')&&o.status!=='delivered'&&o.status!=='rejected').length;
+   const histCount = liveOrders.filter(o=>(!o.type||o.type==='restaurant:relax')&&(o.status==='delivered'||o.status==='rejected')).length;
+
+   b = `<div class="card" style="margin-top:14px">
+     <div class="dtopbar">
+       <div class="dpulse"><i></i><b>LIVE KITCHEN ORDERS</b></div>
+       <div style="display:flex;gap:6px">
+         <button class="btn g" style="padding:4px 10px;min-height:32px;font-size:.7rem" data-act="togglesound">${soundEnabled ? '🔔 Alert: ON' : '🔕 Alert: OFF'}</button>
+         <button class="btn g" style="padding:4px 10px;min-height:32px;font-size:.7rem" data-act="testsound">Test Chime</button>
+       </div>
+     </div>
+     <div class="staff-alert-banner">⚠️ <b>STAFF ALERT:</b> Check if the guest is in the hotel before accepting orders!</div>
+     <div class="filter-bar">
+       <button class="fbtn ${kitchenFilter==='active'?'on':''}" data-act="kfilter" data-f="active">Active Orders (${actCount})</button>
+       <button class="fbtn ${kitchenFilter==='history'?'on':''}" data-act="kfilter" data-f="history">Order History (${histCount})</button>
+     </div>
+     ${!rList.length ? `<div class="empty-box">${kitchenFilter==='active'?'No active orders right now. Waiting for guests to order...':'No past order history yet.'}</div>` : `
+       <div class="ord-grid">
+         ${rList.map(o=>`
+           <div class="ord-card" data-id="${o.id}">
+             <div class="ord-head">
+               <div><span class="ord-room">ROOM ${esc(o.room)}</span></div>
+               <div class="ord-meta"><b>${esc(o.id)}</b><br><small>${new Date(o.createdAt||o.created_at).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}</small></div>
+             </div>
+             <ul class="ord-items">
+               ${(o.items||[]).map(it=>`<li class="ord-item"><span>${esc(it.name)} x ${it.q}</span><b>₹${it.price ? it.price*it.q : 0}</b></li>`).join('')}
+             </ul>
+             ${o.note ? `<div class="ord-note">“${esc(o.note)}”</div>` : ''}
+             ${o.rejectReason||o.reject_reason ? `<div class="ord-note" style="border-left-color:#b3452f;color:#b3452f">Reason: ${esc(o.rejectReason||o.reject_reason)}</div>` : ''}
+             <div class="ord-foot">
+               <span class="ord-badge b-${o.status||'pending'}">${esc(o.status||'pending')}</span>
+               <b class="ord-tot">${o.total ? '₹'+o.total : ''}</b>
+             </div>
+             ${kitchenFilter==='active' ? `
+               <div class="ord-acts">
+                 ${o.status==='pending' ? `
+                   <div style="width:100%;font-size:.72rem;color:#856404;background:#FFF3CD;padding:4px 6px;margin-bottom:4px;font-weight:700">⚠️ Verify guest in hotel before accepting</div>
+                   <button class="btn-act btn-accept" data-act="upstat" data-id="${o.id}" data-st="accepted">✔ Accept</button>
+                   <button class="btn-act btn-reject" data-act="upstat" data-id="${o.id}" data-st="rejected">✖ Reject</button>
+                 ` : o.status==='accepted' ? `
+                   <button class="btn-act btn-ready" data-act="upstat" data-id="${o.id}" data-st="ready">🍳 Mark Ready</button>
+                 ` : o.status==='ready' ? `
+                   <button class="btn-act btn-deliver" data-act="upstat" data-id="${o.id}" data-st="delivered">🚀 Mark Delivered</button>
+                 ` : ''}
+               </div>
+             ` : ''}
+           </div>
+         `).join('')}
+       </div>
+     `}
+   </div>`;
+ }
+
+ if(tab==='staff'){
+   const sList = liveOrders.filter(o=>o.type==='hotel:relax'&&o.status!=='completed');
+   b = `<div class="card" style="margin-top:14px">
+     <div class="dtopbar">
+       <div class="dpulse"><i></i><b>FRONT DESK SERVICE REQUESTS</b></div>
+     </div>
+     <div class="staff-alert-banner">⚠️ <b>STAFF ALERT:</b> Verify guest room before fulfilling request!</div>
+     ${!sList.length ? `<div class="empty-box">No front desk requests right now. Waiting for guests...</div>` : `
+       <div class="ord-grid">
+         ${sList.map(o=>`
+           <div class="ord-card" data-id="${o.id}">
+             <div class="ord-head">
+               <div><span class="ord-room">ROOM ${esc(o.room)}</span></div>
+               <div class="ord-meta"><small>${new Date(o.createdAt||o.created_at).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}</small></div>
+             </div>
+             <div>
+               <h3 style="font-size:1.15rem;margin:6px 0">${esc(o.serviceTitle||o.service_title||'Room Service Request')}</h3>
+               ${o.note ? `<p class="ord-note">“${esc(o.note)}”</p>` : ''}
+             </div>
+             <div class="ord-foot">
+               <span class="ord-badge ${o.status==='in_progress'?'b-accepted':'b-pending'}">${esc(o.status||'pending')}</span>
+             </div>
+             <div class="ord-acts">
+               ${o.status==='pending' ? `
+                 <button class="btn-act btn-accept" data-act="upstat" data-id="${o.id}" data-st="in_progress">✔ In Progress</button>
+                 <button class="btn-act btn-deliver" data-act="upstat" data-id="${o.id}" data-st="completed">✅ Resolved</button>
+               ` : `
+                 <button class="btn-act btn-deliver" data-act="upstat" data-id="${o.id}" data-st="completed">✅ Resolved</button>
+               `}
+             </div>
+           </div>
+         `).join('')}
+       </div>
+     `}
+   </div>`;
+ }
+
+ if(tab==='qr'){
+   b = `<div class="card" style="margin-top:14px">
+     <h2>🔗 Per-Room Direct Links & QR</h2>
+     <p class="mu" style="margin-top:0">Assign each room its own link. When guests open or scan their room link, their room number is <b>automatically locked</b> so no one can falsify another room's number!</p>
+     <div style="display:flex;gap:8px;margin:14px 0">
+       <input id="qrinp" placeholder="Enter room number, e.g. 101" style="flex:1">
+       <button class="btn" data-act="genqr">Copy Link</button>
+     </div>
+     <div id="qrout" style="font-weight:700;color:#6d8a57;min-height:1.2em;margin-bottom:12px"></div>
+     <label style="margin-top:10px">Quick copy for common rooms:</label>
+     <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
+       ${['101','102','103','104','105','201','202','203','204','205'].map(rm=>`
+         <button class="btn g" style="padding:6px 12px;min-height:36px;font-size:.74rem" data-act="quickqr" data-rm="${rm}">Room ${rm}</button>
+       `).join('')}
+     </div>
+   </div>`;
+ }
+
  if(tab==='notices'){b=`<div class="card"><h2>Broadcast a notice</h2><textarea id="nt" rows="3" placeholder="Message for all guests, e.g. Pool is open till 9 PM."></textarea><button class="btn" data-act="addnotice">Broadcast now</button></div><div class="card"><h2>Live notices</h2>${S.notices.map((n,i)=>`<div class="row"><p style="margin:0 0 6px">${esc(n.t)}</p><small class="mu">${esc(n.time)}</small> <button class="btn d" data-act="delnotice" data-i="${i}">Remove</button></div>`).join('')||'<p class="mu">No notices.</p>'}</div>`}
  if(tab==='menu'){const c=S.menu[ci];b=`<div class="card"><div class="pills">${S.menu.map((x,i)=>`<button class="pill ${i===ci?'on':''}" data-act="acat" data-i="${i}">${esc(x.cat)}</button>`).join('')}<button class="pill" data-act="addcat">+ Category</button></div>${c?`${inp(`menu.${ci}.cat`,c.cat,'Category name')}${c.items.map((it,j)=>{const p=`menu.${ci}.items.${j}.`;return `<div class="row">${inp(p+'n',it.n,'Dish name')}${inp(p+'p',it.p,'Price ₹')}${inp(p+'d',it.d,'Description')}<label><input type="checkbox" data-k="${p}v" ${it.v?'checked':''}>Veg</label><label><input type="checkbox" data-k="${p}a" ${it.a?'checked':''}>Available</label> <button class="btn d" data-act="delitem" data-j="${j}">Delete</button></div>`}).join('')}<div class="bar"><button class="btn g" data-act="additem">+ Add item</button><button class="btn d" data-act="delcat">${delArm===ci?'Tap again to delete':'Delete category'}</button></div>`:'<p class="mu">Add a category to start.</p>'}</div>`}
- if(tab==='order'){const dn=(k,t)=>`<div class="card"><h2>${t}</h2><label>WhatsApp number (with country code)</label>${inp('order.'+k+'.wa',S.order[k].wa,'919876543210')}<label>SMS number (blank = same as WhatsApp)</label>${inp('order.'+k+'.sms',S.order[k].sms,'919876543210')}</div>`;b=`<div class="card"><h2>Ordering</h2><label class="sw"><input type="checkbox" data-k="order.on" ${S.order.on?'checked':''}>Accept orders</label>${[S.order.food,S.order.desk].some(d=>num(d.wa)||num(d.sms))?'':'<p class="st">No number is set yet. Guests can pick items but can only copy the order until you add a number below.</p>'}<p class="mu" style="font-size:.9rem">Food orders and toiletries/messages are sent separately, each to its own number. Guests press Send in their own WhatsApp or SMS app. Orders are not stored on this site.</p></div>${dn('food','Kitchen (food orders)')}${dn('desk','Front desk (toiletries and messages)')}<div class="card"><h2>Toiletries</h2>${S.toil.map((x,i)=>`<div class="row">${inp('toil.'+i+'.n',x.n,'Item name')}${inp('toil.'+i+'.p',x.p,'Price Rs (optional)')}<label><input type="checkbox" data-k="toil.${i}.a" ${x.a?'checked':''}>Available</label> <button class="btn d" data-act="deltoil" data-i="${i}">Delete</button></div>`).join('')}<button class="btn g" data-act="addtoil">+ Add item</button></div>`}
- if(tab==='info'){b=`<div class="card"><h2>Details</h2><label>Hotel name</label>${inp('hotel.name',S.hotel.name,'')}<label>Tagline</label>${inp('hotel.tagline',S.hotel.tagline,'')}<label>Reception phone</label>${inp('hotel.phone',S.hotel.phone,'+91…')}<label>WiFi name</label>${inp('wifi.name',S.wifi.name,'')}<label>WiFi password</label>${inp('wifi.pass',S.wifi.pass,'')}<label>Google review link</label>${inp('review',S.review,'https://…')}<label>Extra Hotel & Local Info for Ask Joy AI (beach, pool, spa, check-in, etc.)</label><textarea data-k="hotel.ai_info" rows="4" placeholder="e.g. Check-in is at 12 PM. Beach access is right in front. Infinity pool is open 7 AM - 9 PM. Spa bookings at reception.">${esc(S.hotel.ai_info||'')}</textarea></div><div class="card"><h2>House rules</h2>${S.rules.map((r,i)=>`<div class="row">${inp('rules.'+i,r,'Rule')}<button class="btn d" data-act="delrule" data-i="${i}">Delete</button></div>`).join('')}<button class="btn g" data-act="addrule">+ Add rule</button></div><div class="card"><h2>Admin password</h2><input id="opw" type="password" placeholder="Current password" autocomplete="current-password"><input id="npw" type="password" placeholder="New password (min 6 chars)" autocomplete="new-password"><button class="btn g" data-act="setpw">Change password</button></div>`}
- return `<div class="wrap"><div class="ahead"><div class="bar"><h2 style="margin:0">Admin</h2><div><button class="btn g" data-act="logout">Exit</button> <button class="btn" data-act="save">Save changes</button></div></div><div class="st" id="st"></div></div><div class="pills">${[['notices','Notices'],['menu','Menu'],['info','Info & rules'],['order','Ordering']].map(t=>`<button class="pill ${tab===t[0]?'on':''}" data-act="tab" data-t="${t[0]}">${t[1]}</button>`).join('')}</div>${b}</div>`;
+ if(tab==='order'){const dn=(k,t)=>`<div class="card"><h2>${t}</h2><label>WhatsApp number (with country code)</label>${inp('order.'+k+'.wa',S.order[k].wa,'919876543210')}<label>SMS number (blank = same as WhatsApp)</label>${inp('order.'+k+'.sms',S.order[k].sms,'919876543210')}</div>`;b=`<div class="card"><h2>Ordering</h2><label class="sw"><input type="checkbox" data-k="order.on" ${S.order.on?'checked':''}>Accept orders</label>${[S.order.food,S.order.desk].some(d=>num(d.wa)||num(d.sms))?'':'<p class="st">No number is set yet. Guests can pick items but can only copy the order until you add a number below.</p>'}<p class="mu" style="font-size:.9rem">Orders are sent via WhatsApp and logged live to your Kitchen & Staff Dashboard.</p></div>${dn('food','Kitchen (food orders)')}${dn('desk','Front desk (toiletries and messages)')}<div class="card"><h2>Toiletries</h2>${S.toil.map((x,i)=>`<div class="row">${inp('toil.'+i+'.n',x.n,'Item name')}${inp('toil.'+i+'.p',x.p,'Price Rs (optional)')}<label><input type="checkbox" data-k="toil.${i}.a" ${x.a?'checked':''}>Available</label> <button class="btn d" data-act="deltoil" data-i="${i}">Delete</button></div>`).join('')}<button class="btn g" data-act="addtoil">+ Add item</button></div>`}
+ if(tab==='info'){b=`<div class="card"><h2>Details</h2><label>Hotel name</label>${inp('hotel.name',S.hotel.name,'')}<label>Tagline</label>${inp('hotel.tagline',S.hotel.tagline,'')}<label>Reception phone</label>${inp('hotel.phone',S.hotel.phone,'+91…')}<label>WiFi name</label>${inp('wifi.name',S.wifi.name,'')}<label>WiFi password</label>${inp('wifi.pass',S.wifi.pass,'')}<label>Google review link</label>${inp('review',S.review,'https://…')}<label>Extra Hotel & Local Info for Ask Joy AI</label><textarea data-k="hotel.ai_info" rows="4" placeholder="e.g. Check-in is at 12 PM. Pool is open 7 AM - 9 PM.">${esc(S.hotel.ai_info||'')}</textarea></div><div class="card"><h2>House rules</h2>${S.rules.map((r,i)=>`<div class="row">${inp('rules.'+i,r,'Rule')}<button class="btn d" data-act="delrule" data-i="${i}">Delete</button></div>`).join('')}<button class="btn g" data-act="addrule">+ Add rule</button></div><div class="card"><h2>Admin password</h2><input id="opw" type="password" placeholder="Current password" autocomplete="current-password"><input id="npw" type="password" placeholder="New password (min 6 chars)" autocomplete="new-password"><button class="btn g" data-act="setpw">Change password</button></div>`}
+
+ const pills = [['kitchen','🍳 Kitchen ('+kActive+')'],['staff','🛎️ Front Desk ('+sActive+')'],['notices','Notices'],['menu','Menu'],['info','Info & rules'],['order','Ordering'],['qr','🔗 Room Links']].map(t=>`<button class="pill ${tab===t[0]?'on':''}" data-act="tab" data-t="${t[0]}">${t[1]}</button>`).join('');
+
+ return `<div class="wrap"><div class="ahead"><div class="bar"><h2 style="margin:0">Admin & Dashboard</h2><div><button class="btn g" data-act="logout">Exit</button> <button class="btn" data-act="save">Save changes</button></div></div><div class="st" id="st"></div></div><div class="pills">${pills}</div>${b}</div>`;
 }
 
 function reveal(){const e=document.querySelectorAll('.rv');if(!('IntersectionObserver' in window))return e.forEach(x=>x.classList.add('in'));const o=new IntersectionObserver(r=>r.forEach(x=>{if(x.isIntersecting){x.target.classList.add('in');o.unobserve(x.target)}}),{threshold:.08});e.forEach(x=>o.observe(x))}
@@ -312,6 +433,44 @@ async function act(a,t){
  }
  else if(a==='logout'){admin=false;try{sessionStorage.removeItem('rx_admin')}catch(e){}render()}
  else if(a==='tab'){tab=t.dataset.t;render()}
+ else if(a==='kfilter'){kitchenFilter=t.dataset.f;render()}
+ else if(a==='togglesound'){soundEnabled=!soundEnabled;render()}
+ else if(a==='testsound'){playChime();toast('Chime played 🔔')}
+ else if(a==='genqr'){
+   const r=($('#qrinp')||{}).value.trim();
+   if(!r){toast('Enter a room number');return}
+   const link=location.origin+'/?room='+encodeURIComponent(r);
+   navigator.clipboard.writeText(link).then(()=>{
+     toast('Copied: '+link);
+     const o=$('#qrout');if(o)o.textContent='✓ Copied link: '+link;
+   });
+ }
+ else if(a==='quickqr'){
+   const rm=t.dataset.rm;
+   const link=location.origin+'/?room='+encodeURIComponent(rm);
+   navigator.clipboard.writeText(link).then(()=>{
+     toast('Copied Room '+rm+' link');
+     const o=$('#qrout');if(o)o.textContent='✓ Copied link: '+link;
+   });
+ }
+ else if(a==='upstat'){
+   const oid=t.dataset.id, st=t.dataset.st;
+   let rsn='';
+   if(st==='accepted'||st==='in_progress'){
+     if(!confirm('⚠️ STAFF VERIFICATION ALERT:\n\nPlease confirm if the guest is currently in the hotel before accepting!\n\nPress OK if verified, or Cancel to go back.')){return;}
+   }
+   if(st==='rejected'){
+     rsn=prompt('Enter rejection reason (optional):','Item out of stock');
+     if(rsn===null)return;
+   }
+   t.disabled=true;t.textContent='...';
+   if(SB){
+     SB.from('orders').update({status:st, reject_reason:rsn, updated_at:new Date().toISOString()}).eq('id',oid).then(()=>{
+       fetchLiveOrders();
+       toast('Order updated to '+st);
+     }).catch(err=>{ toast('Update failed'); render(); });
+   }
+ }
  else if(a==='acat'){ci=i;render()}
  else if(a==='addcat'){S.menu.push({cat:'New category',items:[]});ci=S.menu.length-1;render()}
  else if(a==='delcat'){if(delArm===ci){delArm=-1;S.menu.splice(ci,1);ci=0;mcat=0;fp.cat=0;render()}else{const c0=ci;delArm=ci;render();setTimeout(()=>{if(delArm===c0){delArm=-1;if(admin)render()}},4000)}}
@@ -594,7 +753,35 @@ async function chatSend(pre){
 }
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='cin')chatSend()});
 
+// URL Room detection & persistent room locking
+const urlParams = new URLSearchParams(window.location.search);
+const lockedRoom = (urlParams.get('room') || urlParams.get('r') || '').trim();
 let ord={open:false,view:'browse',tab:'toil',cart:{},msg:'',name:'',room:'',note:'',sent:'',sentTab:'',err:''};
+let isRoomLocked = false;
+if(lockedRoom){
+  ord.room = lockedRoom;
+  isRoomLocked = true;
+  try{ sessionStorage.setItem('locked_room', lockedRoom); }catch(e){}
+} else {
+  try{
+    const saved = sessionStorage.getItem('locked_room');
+    if(saved){ ord.room = saved; isRoomLocked = true; }
+  }catch(e){}
+}
+let adminTab='kitchen',kitchenFilter='active',liveOrders=[],soundEnabled=true,lastKnownOrderIds=new Set();
+function playChime(){
+  if(!soundEnabled)return;
+  try{
+    const A=window.AudioContext||window.webkitAudioContext;if(!A)return;
+    const c=new A(),o=c.createOscillator(),g=c.createGain();
+    o.type='sine';o.frequency.setValueAtTime(587.33,c.currentTime);
+    o.frequency.setValueAtTime(880,c.currentTime+0.12);
+    g.gain.setValueAtTime(0.3,c.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.6);
+    o.connect(g);g.connect(c.destination);
+    o.start();o.stop(c.currentTime+0.6);
+  }catch(e){}
+}
 let fp={open:false,cat:0,q:'',veg:false,view:'menu',sent:''};
 try{const g=JSON.parse(localStorage.getItem('rx_guest')||'{}');ord.name=g.name||'';ord.room=g.room||''}catch(e){}
 const num=s=>{let d=String(s||'').replace(/\D/g,'');if(d.length===10)d='91'+d;return d.length>=11?d:''};
@@ -623,7 +810,7 @@ function fList(){const n=fp.q.toLowerCase(),src=fp.q?S.menu.flatMap(x=>x.items):
 function fBar(){const c=cnt('food'),t=tot('food');return c?`<button class="btn" data-act="freview">View order · ${c} item${c>1?'s':''}${t?' · Rs '+t:''}</button>`:''}
 
 function formHtml(tab){const f=tab==='food',p=f?'f':'o',d=dest(tab),wa=num(d.wa),sm=num(d.sms)||wa;
- return `<div class="oform"><div class="two"><input id="${p}n" placeholder="Your name *" maxlength="60" value="${esc(ord.name)}" autocomplete="name"><input id="${p}r" placeholder="Room no. *" maxlength="10" value="${esc(ord.room)}"></div><input id="${p}x" placeholder="Extra note (optional)" maxlength="300" value="${esc(ord.note)}"><div class="odest">${TL[tab]}</div>${f?'':`<div class="osum" id="osum">${sumText(tab)}</div>`}<div class="oerr" id="${f?'ferr':'oerr'}">${esc(ord.err)}</div><div class="oalert" style="margin:10px 0 12px;padding:10px 14px;background:rgba(255,107,74,0.12);color:#b32400;border:1px solid rgba(255,107,74,0.35);border-radius:10px;font-size:0.83rem;line-height:1.45;text-align:left">⚠️ <b>Notice:</b> Spam and fake orders will be tracked and strict actions will be applied. Please place orders only if you are an in-house hotel guest. Thank you!</div>${wa||sm?'':'<p class="mu" style="font-size:.9rem;margin:4px 0 8px">Reception has not set up the ordering number yet. Tap Copy order and show it at reception, or call.</p>'}<div class="osend">${wa?`<button class="btn" data-act="${p}wa">Send on WhatsApp</button>`:''}${sm?`<button class="btn g" data-act="${p}sms">Send as SMS</button>`:''}<button class="btn g" data-act="${p}copy">Copy order</button></div></div>`}
+ return `<div class="oform"><div class="two"><input id="${p}n" placeholder="Your name *" maxlength="60" value="${esc(ord.name)}" autocomplete="name">${isRoomLocked ? `<div style="display:flex;flex-direction:column;flex:1"><input id="${p}r" placeholder="Room no." maxlength="10" value="${esc(ord.room)}" readonly style="background:#e8e4d8;cursor:not-allowed;font-weight:700"><small style="color:#6d8a57;font-size:0.75rem;margin-top:2px;font-weight:700">🔒 Room ${esc(ord.room)} verified</small></div>` : `<input id="${p}r" placeholder="Room no. *" maxlength="10" value="${esc(ord.room)}">`}</div><input id="${p}x" placeholder="Extra note (optional)" maxlength="300" value="${esc(ord.note)}"><div class="odest">${TL[tab]}</div>${f?'':`<div class="osum" id="osum">${sumText(tab)}</div>`}<div class="oerr" id="${f?'ferr':'oerr'}">${esc(ord.err)}</div><div class="oalert" style="margin:10px 0 12px;padding:10px 14px;background:rgba(255,107,74,0.12);color:#b32400;border:1px solid rgba(255,107,74,0.35);border-radius:10px;font-size:0.83rem;line-height:1.45;text-align:left">⚠️ <b>Notice:</b> Spam and fake orders will be tracked and strict actions will be applied. Please place orders only if you are an in-house hotel guest. Thank you!</div>${wa||sm?'':'<p class="mu" style="font-size:.9rem;margin:4px 0 8px">Reception has not set up the ordering number yet. Tap Copy order and show it at reception, or call.</p>'}<div class="osend">${wa?`<button class="btn" data-act="${p}wa">Send on WhatsApp</button>`:''}${sm?`<button class="btn g" data-act="${p}sms">Send as SMS</button>`:''}<button class="btn g" data-act="${p}copy">Copy order</button></div></div>`}
 
 function fCheck(){
  if(fp.view==='sent')return `<div class="ocnf"><h2>Almost done!</h2><p>${fp.sent==='wa'?'WhatsApp':'Your messaging app'} has opened with your food order. <b>Press Send there to place it.</b> If nothing opened, go back and tap Copy order, then show it at reception.</p><div class="osend"><button class="btn g" data-act="fcheckback">Back</button><button class="btn" data-act="fnew">New order</button></div></div>`;
