@@ -225,7 +225,7 @@ function guest(){
  <div class="ly sky">${T.n?'<i class="stars"></i>':''}<i class="sun" style="left:${T.l}%;top:${T.tp}%"></i><i class="cl"></i><i class="cl c2"></i></div>
  <div class="ly far"></div><div class="ly mid"><div class="mill" id="mill"><i class="tw"></i><div class="bl"><i></i><i></i><i></i><i></i></div></div></div><div class="ly near"><i class="barn"></i></div><div class="ly fg"><i class="fence"></i></div>
  <i class="bird"></i><i class="bird b2"></i><i class="bird b3"></i></div></div>
- ${ord.room ? `<div class="room-pill"><span class="r-dot"></span><b>ROOM ${esc(ord.room)}</b><span class="r-vtag">✓ Verified Link</span></div>` : ''}
+ 
  <p class="dear">${esc(H[0])}, dear guest!</p><h1>${esc(S.hotel.name)}</h1><p class="sub">${esc(S.hotel.tagline)}</p><p class="hand" id="say" data-act="owl">${esc(H[1])}</p></div>
  <p class="hint" data-act="owl">Tap the picture ↑</p></header>
  <div class="div">🌾 🌻 🌾</div>
@@ -835,7 +835,7 @@ function afterQty(k,t){if(k[0]==='f'){if(fp.view==='checkout')return paintFood()
 function validate(tab){if(isRoomLocked){ord.room=lockedRoom;}if(ord.name.trim().length<2)return 'Please enter your name.';if(!ord.room.trim())return 'Please enter your room number.';if(tab==='msg'){if(!ord.msg.trim())return 'Please write your message.'}else if(!cnt(tab))return 'Add at least one item.';return ''}
 
 function sendOrder(kind,tab){ord.err=validate(tab);const e=$(tab==='food'?'#ferr':'#oerr');if(e)e.textContent=ord.err;if(ord.err)return;
- try{localStorage.setItem('rx_guest',JSON.stringify({name:ord.name.trim(),room:ord.room.trim()}))}catch(x){}
+ try{localStorage.setItem('rx_guest',JSON.stringify({name:ord.name.trim()}))}catch(x){}
  if(kind==='copy'){const m=buildMsg(false,tab);(navigator.clipboard?navigator.clipboard.writeText(m):Promise.reject()).then(()=>toast('Order copied')).catch(()=>toast('Copy not available'));return}
  const d=dest(tab),wa=num(d.wa),sm=num(d.sms)||wa,u=kind==='wa'?`https://wa.me/${wa}?text=${encodeURIComponent(buildMsg(true,tab))}`:`sms:+${sm}?&body=${encodeURIComponent(buildMsg(false,tab))}`;
  const a=document.createElement('a');a.href=u;if(kind==='wa'){a.target='_blank';a.rel='noopener'}document.body.appendChild(a);a.click();a.remove();
