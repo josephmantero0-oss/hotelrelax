@@ -850,8 +850,7 @@ function smartReply(q){
    return `📞 Reception Contact:\nPhone: ${S.hotel.phone || '+91 8956364864'}\nHotel: ${S.hotel.name} (${S.hotel.tagline || ''})\n\nFeel free to call or message us for any assistance!`;
  }
 
- 
- }
+
 
  // 14. Greetings
  if(text.includes('hi') || text.includes('hello') || text.includes('hey') || text.includes('namaste') || text.includes('good morning') || text.includes('good evening')){
